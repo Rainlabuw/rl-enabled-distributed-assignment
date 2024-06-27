@@ -1,0 +1,23 @@
+env: "interference_constellation_env"
+
+env_args:
+  num_planes: 32
+  num_sats_per_plane: 18
+  res: 1
+  T: 100
+  L: 3
+  lambda_: 0.5
+  bids_as_actions: null
+  N: 10
+  M: 10
+
+# Scheme related arguments
+
+test_greedy: True
+test_nepisode: 20
+test_interval: 25000
+log_interval: 25000
+runner_log_interval: 5000
+learner_log_interval: 5000
+use_wandb: False
+wandb_run_name: null

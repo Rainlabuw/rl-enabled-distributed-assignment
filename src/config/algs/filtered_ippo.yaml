@@ -1,0 +1,36 @@
+# --- IPPO specific parameters ---
+
+action_selector: "filtered_const_soft_policies"
+mask_before_softmax: True
+
+runner: "parallel"
+
+buffer_size: 6
+batch_size_run: 2
+batch_size: 6
+
+# update the target network every {} training steps
+target_update_interval_or_tau: 0.01
+
+
+lr: 0.0003
+
+obs_agent_id: False #we get benefit info directly, so we don't need agent id
+obs_last_action: False
+obs_individual_obs: False
+
+# use IA2C
+agent_output_type: "pi_logits"
+learner: "filtered_ppo_learner"
+entropy_coef: 0.01
+standardise_returns: False
+standardise_rewards: True
+agent: "flat_const_agent"
+use_rnn: False
+q_nstep: 5 # 1 corresponds to normal r + gammaV
+critic_type: "ac_critic"
+epochs: 4
+eps_clip: 0.2
+name: "filtered_ippo"
+
+t_max: 500000

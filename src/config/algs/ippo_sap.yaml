@@ -1,0 +1,43 @@
+# --- IPPO SAP specific parameters ---
+
+env_args:
+  bids_as_actions: True #in my context, continuous IPPO is used for bids as actions case.
+
+# use continuous action selector with variance of epsilon
+action_selector: "continuous"
+softmax_agent_inputs: True #softmax agent bets before selection
+epsilon_start: 0.3
+epsilon_finish: 0.05
+epsilon_anneal_time: 50000
+evaluation_epsilon: 0.0
+
+runner: "parallel"
+
+buffer_size: 10
+batch_size_run: 10
+batch_size: 10
+
+# update the target network every {} training steps
+target_update_interval_or_tau: 0.01
+
+
+lr: 0.0003
+
+obs_agent_id: False
+obs_last_action: False
+obs_individual_obs: False
+
+# use IA2C
+agent_output_type: "pi_logits"
+learner: "cont_ppo_learner"
+entropy_coef: 0.01
+standardise_returns: False
+standardise_rewards: True
+use_rnn: False
+q_nstep: 5 # 1 corresponds to normal r + gammaV
+critic_type: "ac_critic"
+epochs: 4
+eps_clip: 0.2
+name: "ippo_sap"
+
+t_max: 20050000

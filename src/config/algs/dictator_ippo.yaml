@@ -1,0 +1,42 @@
+# --- IPPO specific parameters ---
+
+action_selector: "soft_policies"
+mask_before_softmax: True
+
+# runner: "episode"
+# batch_size: 32
+
+runner: "parallel"
+batch_size_run: 10
+batch_size: 10
+
+# update the target network every {} training steps
+target_update_interval_or_tau: 0.01
+
+lr: 0.0003
+
+obs_agent_id: True
+obs_last_action: False
+obs_individual_obs: False
+
+# use IA2C
+agent_output_type: "pi_logits"
+learner: "ppo_learner"
+entropy_coef: 0.01
+standardise_returns: False
+standardise_rewards: True
+use_rnn: False
+q_nstep: 5 # 1 corresponds to normal r + gammaV
+critic_type: "ac_critic"
+epochs: 4
+eps_clip: 0.2
+name: "dictator_ippo"
+
+t_max: 50000
+
+#Behavior cloning properties
+use_bc: True
+buffer_size: 1000 #size of the buffer to use for behavior cloning
+offline_dataset_path: "dictator_data" #path to the offline dataset
+pretrain_batches: 1000 #Episodes to train on provided replay buffer (match 10000 exploration steps for REDA and IQL)
+pretrain_batch_size_run: 2 #this seems like the sweet spot for n=324, m=450

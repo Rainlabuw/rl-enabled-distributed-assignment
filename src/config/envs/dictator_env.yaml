@@ -1,0 +1,16 @@
+env: "dictator_env"
+
+env_args:
+  T: 10
+
+test_greedy: True
+test_nepisode: 50
+test_interval: 2500
+log_interval: 5000
+runner_log_interval: 2500
+learner_log_interval: 2500
+use_wandb: False
+wandb_run_name: null
+save_model_interval: 50000
+
+obs_agent_id: True #need to observe agent id bc not observing benefits

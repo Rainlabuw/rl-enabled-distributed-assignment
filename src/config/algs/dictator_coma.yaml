@@ -1,0 +1,46 @@
+# --- COMA specific parameters ---
+
+action_selector: "soft_policies"
+mask_before_softmax: True
+
+runner: "episode"
+
+batch_size: 32
+
+# update the target network every {} training steps
+target_update_interval_or_tau: 200
+
+lr: 0.0003
+
+obs_agent_id: True
+obs_last_action: False
+obs_individual_obs: False
+
+
+# use COMA
+agent: "rnn"
+agent_output_type: "pi_logits"
+learner: "coma_learner"
+critic_q_fn: "coma"
+standardise_returns: False
+standardise_rewards: True
+
+hidden_dim: 64
+
+use_rnn: False
+critic_baseline_fn: "coma"
+critic_train_mode: "seq"
+critic_train_reps: 1
+entropy_coef: 0.001
+q_nstep: 3  # 0 corresponds to default Q, 1 is r + gamma*Q, etc
+critic_type: coma_critic
+
+name: "dictator_coma"
+t_max: 50000
+
+#Behavior cloning properties
+use_bc: True
+buffer_size: 1000 #size of the buffer to use for behavior cloning
+offline_dataset_path: "dictator_data" #path to the offline dataset
+pretrain_batches: 1000 #Episodes to train on provided replay buffer (match 10000 exploration steps for REDA and IQL)
+pretrain_batch_size_run: 1

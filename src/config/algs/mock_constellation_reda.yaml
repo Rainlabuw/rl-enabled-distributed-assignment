@@ -1,0 +1,43 @@
+# --- IQL SAP specific parameters ---
+
+mac: "jumpstart_mac"
+# use epsilon greedy action selector
+action_selector: "sap"
+epsilon_start: 1
+epsilon_finish: 0
+epsilon_anneal_time: 20000
+evaluation_epsilon: 0
+# jumpstart_policy configs
+jumpstart_action_selector: "haa_selector"
+jumpstart_epsilon_start: 1
+jumpstart_epsilon_finish: 0
+jumpstart_epsilon_anneal_time: 20000
+jumpstart_evaluation_epsilon: 0
+
+t_max: 60000
+
+runner: "episode"
+
+buffer_size: 1000
+
+use_mps: False
+
+# update the target network every {} episodes
+target_update_interval_or_tau: 0.01
+
+# --- Agent parameters ---
+agent: "rnn"
+num_filters: 5 # Number of filters
+hidden_dim: 64 # Size of hidden state for default rnn agent
+use_rnn: False
+
+# use the Q_Learner to train
+standardise_returns: False
+standardise_rewards: True
+agent_output_type: "q"
+learner: "sap_q_learner"
+double_q: True
+mixer:
+
+
+name: "mock_const_reda"
