@@ -10,7 +10,7 @@ evaluation_epsilon: 0.0
 runner: "episode"
 
 # jumpstart_policy configs
-jumpstart_action_selector: "haa_selector"
+jumpstart_action_selector: "alpha_beta_selector"
 jumpstart_epsilon_start: 1
 jumpstart_epsilon_finish: 0
 jumpstart_epsilon_anneal_time: 10000

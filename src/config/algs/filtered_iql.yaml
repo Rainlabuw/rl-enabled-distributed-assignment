@@ -2,7 +2,7 @@
 
 mac: "jumpstart_mac"
 # use epsilon greedy action selector
-action_selector: "filtered_const_epsilon_greedy"
+action_selector: "filtered_epsilon_greedy"
 epsilon_start: 1.0
 epsilon_finish: 0
 epsilon_anneal_time: 300000
@@ -10,7 +10,7 @@ evaluation_epsilon: 0.0
 runner: "episode"
 
 # jumpstart_policy configs
-jumpstart_action_selector: "haa_selector"
+jumpstart_action_selector: "alpha_beta_selector"
 jumpstart_epsilon_start: 1
 jumpstart_epsilon_finish: 0
 jumpstart_epsilon_anneal_time: 300000

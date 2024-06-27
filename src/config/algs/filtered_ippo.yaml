@@ -1,6 +1,6 @@
 # --- IPPO specific parameters ---
 
-action_selector: "filtered_const_soft_policies"
+action_selector: "filtered_soft_policies"
 mask_before_softmax: True
 
 runner: "parallel"

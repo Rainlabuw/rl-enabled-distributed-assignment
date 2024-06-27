@@ -15,7 +15,6 @@ learner_log_interval: 2000 # Log training stats every {} timesteps
 t_max: 10000 # Stop running after this many timesteps
 use_cuda: False # Don't use gpu by default bc we're on a Mac
 use_mps: False # Don't Apple MPS for GPU memory management by default
-use_mps_action_selection: False # Using MPS for action selection is usually slower, except potentially on very large constellations
 buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 
 # --- Logging options ---
