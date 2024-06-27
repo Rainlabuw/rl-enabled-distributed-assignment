@@ -44,12 +44,8 @@ class ParallelRunner:
         self.log_train_stats_t = -100000
 
     def setup(self, scheme, groups, preprocess, mac):
-        if not self.args.use_mps_action_selection:
-            self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
-                                    preprocess=preprocess, device="cpu")
-        else:
-            self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
-                                    preprocess=preprocess, device=self.args.device)
+        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
+                                preprocess=preprocess, device="cpu")
         self.mac = mac
         
         # self.update_action_selector_envs()
@@ -111,11 +107,8 @@ class ParallelRunner:
         self.env_steps_this_run = 0
 
     def run(self, test_mode=False):
-        st = time.time()
         self.reset()
-        print("Reset time: ", time.time() - st)
 
-        st = time.time()
         all_terminated = False
         episode_returns = [0 for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
@@ -229,7 +222,6 @@ class ParallelRunner:
                 self.logger.log_stat("epsilon", self.mac.action_selector.epsilon, self.t_env)
             self.log_train_stats_t = self.t_env
             self.logger.log_stat("steps", self.t_env, self.t_env)
-        print("Time to execute actions: ", time.time() - st)
         return self.batch
 
     def _log(self, returns, stats, prefix):

@@ -27,12 +27,8 @@ class EpisodeRunner:
         self.log_train_stats_t = -1000000
 
     def setup(self, scheme, groups, preprocess, mac):
-        if not self.args.use_mps_action_selection:
-            self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
-                                    preprocess=preprocess, device="cpu")
-        else:
-            self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
-                                    preprocess=preprocess, device=self.args.device)
+        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.T + 1,
+                                preprocess=preprocess, device="cpu")
         self.mac = mac
 
         #Add environment to action selector (add in a list to be consistent w parallel)
@@ -58,17 +54,13 @@ class EpisodeRunner:
         self.t = 0
 
     def run(self, test_mode=False):
-        st = time.time()
         self.reset() #empty batch, reset environment, t=0
-        print(f"Reset time: {time.time() - st}")
         terminated = False
         episode_return = 0
         #Initialize RNN hidden state for each agent
         self.mac.init_hidden(batch_size=self.batch_size)
 
-        st = time.time()
         while not terminated:
-            stt = time.time()
             pre_transition_data = self.env.get_pretransition_data()
 
             #Add info to replay buffer that is available BEFORE the transition
@@ -94,8 +86,7 @@ class EpisodeRunner:
             self.batch.update(post_transition_data, ts=self.t)
 
             self.t += 1
-            print(f"Time to run one step: {time.time() - stt}, rewards {sum(rewards)}")
-        print(f"Time to run env and choose actions: {time.time() - st}")
+
         last_data = self.env.get_pretransition_data()
         if test_mode and self.args.render:
             print(f"Episode return: {episode_return}")

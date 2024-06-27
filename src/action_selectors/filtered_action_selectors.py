@@ -36,10 +36,7 @@ class FilteredREDASelector():
         n = beta.shape[1]
         m = beta.shape[2]
 
-        if self.args.use_mps_action_selection:
-            picked_actions = th.zeros(num_batches, n, device=self.args.device)
-        else:
-            picked_actions = th.zeros(num_batches, n, device="cpu")
+        picked_actions = th.zeros(num_batches, n, device="cpu")
         
         for batch in range(num_batches):
             # Solve the assignment problem for each batch, converting to numpy first

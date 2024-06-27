@@ -27,10 +27,7 @@ class AlphaBetaHatSelector(object):
         # m = beta.shape[3]
         # L = beta.shape[4] (in constellation env)
 
-        if self.args.use_mps_action_selection:
-            picked_actions = th.zeros(num_batches, n, device=self.args.device)
-        else:
-            picked_actions = th.zeros(num_batches, n, device="cpu")
+        picked_actions = th.zeros(num_batches, n, device="cpu")
         
         for batch_num in range(num_batches):
             #get fields in batch that are part of the state
@@ -77,10 +74,7 @@ class HAALSelector(object):
         #Note that num_time_steps is always 1 when calling this function, so we index that axis w/ 0 later.
         (num_batches, num_time_steps, n, m, L) = batch["beta"].shape
 
-        if self.args.use_mps_action_selection:
-            picked_actions = th.zeros(num_batches, n, device=self.args.device)
-        else:
-            picked_actions = th.zeros(num_batches, n, device="cpu")
+        picked_actions = th.zeros(num_batches, n, device="cpu")
         
         effective_L = min(self.envs[0].L, self.envs[0].T - self.envs[0].k)
         all_time_intervals = generate_all_time_intervals(effective_L)

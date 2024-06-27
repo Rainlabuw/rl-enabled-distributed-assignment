@@ -47,7 +47,7 @@ class JumpstartMAC:
         """
         agent_inputs = self._build_inputs(ep_batch, t)
         avail_actions = ep_batch["avail_actions"][:, t]
-        if action_selection_mode and not self.args.use_mps_action_selection:
+        if action_selection_mode:
             agent_outs, self.hidden_states = self.selector_agent(agent_inputs, self.hidden_states)
         else:
             agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states) #note that hidden state is unused if RNN not used
@@ -60,10 +60,7 @@ class JumpstartMAC:
                 reshaped_avail_actions = avail_actions.reshape(ep_batch.batch_size * self.n, -1)
                 agent_outs[reshaped_avail_actions == 0] = -1e10
             
-            # if self.args.use_mps_action_selection:
             agent_outs = th.nn.functional.softmax(agent_outs, dim=-1)
-            # else: #otherwise, take softmax such that it remains on cpu
-            #     agent_outs = softmax(agent_outs, dim=-1)
 
         return agent_outs.view(ep_batch.batch_size, self.n, -1)
 
@@ -88,8 +85,7 @@ class JumpstartMAC:
 
     def _build_agents(self, input_shape):
         self.agent = agent_REGISTRY[self.args.agent](input_shape, self.args) #Agent for training, potentially on GPU
-        if not self.args.use_mps_action_selection:
-            self.selector_agent = agent_REGISTRY[self.args.agent](input_shape, self.args) #Agent for selecting actions, always on CPU
+        self.selector_agent = agent_REGISTRY[self.args.agent](input_shape, self.args) #Agent for selecting actions, always on CPU
 
     def update_action_selector_agent(self):
         self.selector_agent.load_state_dict(self.agent.state_dict())

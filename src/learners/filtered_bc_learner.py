@@ -91,8 +91,7 @@ class FilteredBCLearner:
         grad_norm = th.nn.utils.clip_grad_norm_(self.agent_params, self.args.grad_norm_clip)
         self.agent_optimiser.step()
 
-        if not self.args.use_mps_action_selection:
-            self.mac.update_action_selector_agent()
+        self.mac.update_action_selector_agent()
 
         total_beta = batch["beta"].float().sum(axis=-1)
         top_agent_tasks = th.topk(total_beta, k=self.M, dim=-1).indices
