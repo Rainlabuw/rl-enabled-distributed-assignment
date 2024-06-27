@@ -32,4 +32,6 @@ REGISTRY["cont_ppo_learner"] = ContinuousPPOLearner
 
 REGISTRY["pac_learner"] = PACActorCriticLearner
 REGISTRY["pac_dcg_learner"] = PACDCGLearner
-REGISTRY["bc_learner"] = FilteredBCLearner
+
+REGISTRY["bc_learner"] = BCLearner
+REGISTRY["filtered_bc_learner"] = FilteredBCLearner

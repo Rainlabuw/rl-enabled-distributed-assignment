@@ -125,9 +125,8 @@ def run_sequential(args, logger):
     groups = {"agents": args.n}
 
     #~~~~~~~~SET UP BUFFER (either load existing buffer, or generate a new one)~~~~~~~~~
-    use_bc = getattr(args, "use_bc", False)
-    use_offline_rl = getattr(args, "use_offline_rl", False)
-    if not use_bc and not use_offline_rl:
+    bc_learner_type = getattr(args, "bc_learner", None)
+    if bc_learner_type is None:
         logger.console_logger.info("No offline dataset desired - proceeding as normal.")
         buffer = ReplayBuffer(
             sample_env.scheme,
@@ -176,14 +175,14 @@ def run_sequential(args, logger):
 
     # Learner
     learner = le_REGISTRY[args.learner](mac, buffer.scheme, logger, args)
-    if use_bc: bc_learner = le_REGISTRY["bc_learner"](mac, buffer.scheme, logger, args)
+    if bc_learner_type: bc_learner = le_REGISTRY[bc_learner_type](mac, buffer.scheme, logger, args)
 
     if args.use_mps: 
         learner.mps()
-        if use_bc: bc_learner.mps()
+        if bc_learner_type is not None: bc_learner.mps()
     elif args.use_cuda: 
         learner.cuda()
-        if use_bc: bc_learner.cuda()
+        if bc_learner_type is not None: bc_learner.cuda()
 
 
     # ~~~~~~~~~~~~~~~~ LOAD MODEL IF DESIRED ~~~~~~~~~~~~~~~~
@@ -218,7 +217,7 @@ def run_sequential(args, logger):
 
             logger.console_logger.info("Loading model from {}".format(model_path))
             learner.load_models(model_path)
-            if use_bc: bc_learner.load_models(model_path)
+            if bc_learner_type is not None: bc_learner.load_models(model_path)
             runner.t_env = timestep_to_load
 
     # ~~~~~~~~~~~~~~~~ EVALUATE IF DESIRED (skip the rest of training if so) ~~~~~~~~~~~~~~~~
@@ -242,11 +241,7 @@ def run_sequential(args, logger):
     last_log_T = 0
     model_save_time = 0
 
-    if use_offline_rl:
-        last_test_T, last_log_T, model_save_time, episode = run_offline_rl_pretraining(args, logger, runner, buffer, learner,
-                                                                           last_test_T, last_log_T, model_save_time, episode)
-        logger.console_logger.info("Done with offline RL pretraining after {} steps".format(runner.t_env))
-    if use_bc:
+    if bc_learner_type is not None:
         last_test_T, last_log_T, model_save_time, episode = run_behavior_cloning_pretraining(args, logger, runner, buffer, bc_learner,
                                                                             last_test_T, last_log_T, model_save_time, episode)
         #Reset the buffer to an empty buffer, with the size of the batch size.
@@ -331,70 +326,6 @@ def run_sequential(args, logger):
 
     runner.close_env()
     logger.console_logger.info("Finished Training")
-
-
-def run_offline_rl_pretraining(args, logger, runner, buffer, learner,
-                    last_test_T, last_log_T, model_save_time, episode):
-    epochs = getattr(args, "epochs", 1) #if there are no epochs, usually there is one grad update for each batch
-
-    pretrain_batches = runner.t_env * epochs // args.T
-    while pretrain_batches < args.pretrain_batches:
-        if (pretrain_batches % 50) == 0: logger.console_logger.info(f"Pretraining w offline RL, {pretrain_batches}/{args.pretrain_batches}")
-        episode_sample = buffer.sample(args.batch_size)
-
-        # Truncate batch to only filled timesteps
-        max_ep_t = episode_sample.max_t_filled()
-        episode_sample = episode_sample[:, :max_ep_t]
-
-        #If the data from the replay buffer is on CPU, move it to GPU
-        if episode_sample.device != args.device:
-            episode_sample.to(args.device)
-
-        learner.train(episode_sample, 0, episode_num=0)
-        pretrain_batches += args.batch_size_run // epochs
-
-        #Increment runner t_env to simulate the number of environment steps
-        #In normal training, training happens after each episode, so we need to increment t_env by the number of steps in an episode
-        runner.t_env += args.batch_size_run * args.T // epochs
-
-        # ~~~~~~~~~~~ LOGGING DURING OFFLINE RL ~~~~~~~~~~~
-        # Execute test runs once in a while
-        n_test_runs = max(1, args.test_nepisode // runner.batch_size)
-        if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
-            logger.console_logger.info(
-                "t_env: {} / {}".format(runner.t_env, args.t_max)
-            )
-
-            last_test_T = runner.t_env
-            for _ in range(n_test_runs):
-                runner.run(test_mode=True)
-
-        if args.save_model and (
-            runner.t_env - model_save_time >= args.save_model_interval
-            or model_save_time == 0
-        ):
-            model_save_time = runner.t_env
-            # save_path = os.path.join(
-            #     args.local_results_path, "models", args.unique_token, str(runner.t_env)
-            # )
-            save_path = os.path.join(
-                args.local_results_path, "models", args.wandb_run_name, str(runner.t_env)
-            )
-            os.makedirs(save_path, exist_ok=True)
-            logger.console_logger.info("Saving models to {}".format(save_path))
-
-            # learner should handle saving/loading -- delegate actor save/load to mac,
-            # use appropriate filenames to do critics, optimizer states
-            learner.save_models(save_path)
-
-        episode += args.batch_size_run
-
-        if (runner.t_env - last_log_T) >= args.log_interval:
-            logger.log_stat("episode", episode, runner.t_env)
-            logger.print_recent_stats()
-            last_log_T = runner.t_env
-    
-    return last_test_T, last_log_T, model_save_time, episode
     
 def run_behavior_cloning_pretraining(args, logger, runner, buffer, learner,
                          last_test_T, last_log_T, model_save_time, episode):
