@@ -45,12 +45,12 @@ class COMACritic(nn.Module):
             inputs.append(batch["obs"][:, ts])
 
         # actions (masked out by agent)
-        print("actions", batch["actions_onehot"][0, 0,:,:])
+        # print("actions", batch["actions_onehot"][0, 0,:,:])
         actions = batch["actions_onehot"][:, ts].view(bs, max_t, 1, -1).repeat(1, 1, self.n, 1)
         agent_mask = (1 - th.eye(self.n, device=batch.device))
         agent_mask = agent_mask.view(-1, 1).repeat(1, self.m).view(self.n, -1)
         inputs.append(actions * agent_mask.unsqueeze(0).unsqueeze(0))
-        print("inputs", (actions * agent_mask.unsqueeze(0).unsqueeze(0))[0,0,:,:])
+        # print("inputs", (actions * agent_mask.unsqueeze(0).unsqueeze(0))[0,0,:,:])
 
         # last actions
         if self.args.obs_last_action:

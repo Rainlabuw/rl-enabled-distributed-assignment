@@ -1,7 +1,5 @@
 import copy
 from components.episode_buffer import EpisodeBatch
-from modules.critics.coma import COMACritic
-from utils.rl_utils import build_td_lambda_targets
 import torch as th
 import torch.nn.functional as F
 from torch.optim import Adam

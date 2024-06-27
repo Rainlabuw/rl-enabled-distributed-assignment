@@ -1,9 +1,6 @@
 # code heavily adapted from https://github.com/AnujMahajanOxf/MAVEN
 import copy
 from components.episode_buffer import EpisodeBatch
-from modules.critics.coma import COMACritic
-from modules.critics.centralV import CentralVCritic
-from utils.rl_utils import build_td_lambda_targets
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
