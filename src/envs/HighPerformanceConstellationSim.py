@@ -268,26 +268,6 @@ class HighPerformanceConstellationSim(object):
                     else:
                         continue
 
-        #Store matrix which maps neighboring hexagons
-        self.neighbor_matrix = np.zeros((m,m)) #don't want diagonal entries to be 1 b/c beams dont self interfere
-        for j, hexagon in enumerate(hexagons):
-            neighbor_hexes = h3.k_ring(hexagon, 1)
-            for neighbor_hex in neighbor_hexes:
-                if neighbor_hex in hex_to_task_mapping.keys():
-                    self.neighbor_matrix[j,hex_to_task_mapping[neighbor_hex]] = 1
-                    self.neighbor_matrix[hex_to_task_mapping[neighbor_hex],j] = 1
-        
-        # hex0_poly = Polygon(h3.h3_to_geo_boundary(hexagons[0], geo_json=True))
-        # print("NEIGHBORS OF HEX 0:", hex0_poly.centroid.y, hex0_poly.centroid.x)
-        # for j in range(m):
-        #     if self.neighbor_matrix[0,j] == 1:
-        #         boundary = h3.h3_to_geo_boundary(hexagons[j], geo_json=True)
-        #         polygon = Polygon(boundary)
-
-        #         lat = polygon.centroid.y
-        #         lon = polygon.centroid.x
-        #         print(j, lat, lon)
-
         return sat_prox_mat
 
     def determine_connectivity_graph(self):
