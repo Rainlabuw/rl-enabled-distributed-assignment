@@ -101,11 +101,7 @@ class PPOLearner:
 
             # Optimise agents
             self.agent_optimiser.zero_grad()
-            for param in self.agent_params:
-                print(f"Gradient for {param.grad}")
             pg_loss.backward()
-            for param in self.agent_params:
-                print(f"Gradient for {param.grad}")
             grad_norm = th.nn.utils.clip_grad_norm_(self.agent_params, self.args.grad_norm_clip)
             self.agent_optimiser.step()
 
@@ -119,7 +115,6 @@ class PPOLearner:
         elif self.args.target_update_interval_or_tau <= 1.0:
             self._update_targets_soft(self.args.target_update_interval_or_tau)
 
-        print(grad_norm.item(), pg_loss.item(), self.args.grad_norm_clip)
         self.mac.update_action_selector_agent()
             
         if t_env - self.log_stats_t >= self.args.learner_log_interval:

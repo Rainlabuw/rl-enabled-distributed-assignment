@@ -25,7 +25,10 @@ class BasicMAC:
 
     def forward(self, ep_batch, t, test_mode=False, action_selection_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)
-        agent_outs, self.hidden_states = self.selector_agent(agent_inputs, self.hidden_states)
+        if action_selection_mode:
+            agent_outs, self.hidden_states = self.selector_agent(agent_inputs, self.hidden_states)
+        else:
+            agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
@@ -57,7 +60,6 @@ class BasicMAC:
         self.selector_agent = agent_REGISTRY[self.args.agent](input_shape, self.args) #Agent for selecting actions, always on CPU
 
     def update_action_selector_agent(self):
-        print("updating")
         self.selector_agent.load_state_dict(self.agent.state_dict())
 
     def _build_inputs(self, batch, t):
