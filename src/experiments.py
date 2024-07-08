@@ -317,7 +317,7 @@ def constellation_env_test():
     haal_vals = []
     alpha_beta_vals = []
 
-    num_tests = 1
+    num_tests = 5
     for _ in range(num_tests):
         print(f"Testing algs on random constellation {_+1}/{num_tests}")
         const = HighPerformanceConstellationSim(num_planes, num_sats_per_plane, T)
@@ -334,7 +334,7 @@ def constellation_env_test():
         # REDA
         alg_str = 'filtered_reda'
         load_path = './pretrained_models/reda_constellation_env'
-        reda_assigns, reda_val, reda_ps = test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items, verbose=True)
+        reda_assigns, reda_val, reda_ps = test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items, verbose=False)
         reda_sat_ps.append(np.sum(np.where(reda_ps > 0, 1, 0)) / n)
 
         _, _, reda_al, _ = calc_pass_statistics(sat_prox_mat, reda_assigns)
