@@ -12,8 +12,6 @@ from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 from poliastro.spheroid_location import SpheroidLocation
 from poliastro.core.events import line_of_sight
-import h3
-from shapely.geometry import Polygon
 
 class HighPerformanceConstellationSim(object):
     def __init__(self, num_planes, num_sats_per_plane, T=None, dt=63.76469*u.second, inc=58, altitude=550, isl_dist=np.inf, dtype=np.float64, use_graphs=False) -> None:
@@ -71,11 +69,11 @@ class HighPerformanceConstellationSim(object):
         self.sat_rs_over_time = np.zeros((self.n, 3, T), dtype=self.dtype)
         self.graphs = []
         for k in range(T):
-            if self.use_graphs: 
+            if self.use_graphs:
                 self.graphs.append(self.determine_connectivity_graph())
             else:
-                self.graphs.append(None) #placeholder
-
+                self.graphs.append(None)
+            
             for i, sat in enumerate(self.sats):
                 sat.propagate_orbit(dt)
                 self.sat_rs_over_time[i, :, k] = sat.orbit.r.to_value(u.km)
@@ -106,168 +104,24 @@ class HighPerformanceConstellationSim(object):
             lat = np.random.uniform(-max_lat, max_lat)
             task_loc = SpheroidLocation(lat*u.deg, lon*u.deg, 0*u.m, Earth).cartesian_cords.to_value(u.km)
 
-            if self.num_planes < 40:
-                for plane in range(self.num_planes):
-                    i = plane*self.num_sats_per_plane
-                    for k in range(T):
-                        sat_r = self.sat_rs_over_time[i, :, k]
-                        sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    
-                    if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                        continue
+            # if self.skip_planes:
+            for plane in range(self.num_planes):
+                i = plane*self.num_sats_per_plane
+                for k in range(T):
+                    sat_r = self.sat_rs_over_time[i, :, k]
+                    sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
+                
+                if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
+                    continue
 
-                    for other_sat_i in range(1, self.num_sats_per_plane):
-                        if self.timestep_offset is not None:
-                            sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                        else:
-                            for k in range(T):
-                                sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-            
-            #if you have 40 planes, with a 120 degree FOV, your ground track is 20 degrees wide.
-            #Then, if no satellite in the plane before you nor the plane after you can see the task, no satellites in your plane can see it either.
-            else:
-                # iterate through even planes
-                planes_where_task_visible = set()
-                for plane in range(0, self.num_planes, 2):
-                    i = plane*self.num_sats_per_plane
-                    for k in range(T):
-                        sat_r = self.sat_rs_over_time[i, :, k]
-                        sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    
-                    if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                        continue
+                for other_sat_i in range(1, self.num_sats_per_plane):
+                    if self.timestep_offset is not None:
+                        sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
                     else:
-                        planes_where_task_visible.add(plane)
-
-                    for other_sat_i in range(1, self.num_sats_per_plane):
-                        if self.timestep_offset is not None:
-                            sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                        else:
-                            for k in range(T):
-                                sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-
-                #iterate through odd planes
-                for plane in range(1, self.num_planes, 2):
-                    plane_before = plane-1
-                    plane_after = (plane+1) % self.num_planes
-                    if plane_before in planes_where_task_visible or plane_after in planes_where_task_visible:
-                        i = plane*self.num_sats_per_plane
                         for k in range(T):
-                            sat_r = self.sat_rs_over_time[i, :, k]
-                            sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                        
-                        if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                            continue
-
-                        for other_sat_i in range(1, self.num_sats_per_plane):
-                            if self.timestep_offset is not None:
-                                sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                            else:
-                                for k in range(T):
-                                    sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                    sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    else:
-                        continue
-        return sat_prox_mat
-    
-    def get_proximities_for_coverage_tasks(self, res=1, max_lat=55, fov=60, seed=None):
-        """
-        Assume tasks are all worth the same amount (1).
-
-        res is a metric from the H3 package which defines the resolution of the hexagons,
-        with resolution 1 being the highest resolution.
-            res 1: 721 at 55 max_lat, 824 at 70 max_lat
-            res 2: 4908 at 55 max_lat, 5000+ at 70 max_lat, so prob too many
-        """
-        np.random.seed(seed)
-        T = self.sat_rs_over_time.shape[2]
-
-        #precalculate the sigma which determines how prox falls off with angle
-        prox_at_max_fov = 0.05
-        gaussian_sigma_2 = np.sqrt(-(fov**2)/(2*np.log(prox_at_max_fov)))**2
-
-        hexagons = generate_smooth_coverage_hexagons((-max_lat, max_lat), (-180, 180), res=res)
-        hex_to_task_mapping = {hexagon: i for i, hexagon in enumerate(hexagons)}
-        m = max(self.n, len(hexagons)) #if there are more sats than hexagons, we need at least n tasks, so we make dummy ones
-
-        sat_prox_mat = np.zeros((self.n, m, T), dtype=self.dtype)
-        #Add tasks at centroid of all hexagons
-        for j, hexagon in enumerate(hexagons):
-            boundary = h3.h3_to_geo_boundary(hexagon, geo_json=True)
-            polygon = Polygon(boundary)
-
-            lat = polygon.centroid.y
-            lon = polygon.centroid.x
-
-            task_loc = SpheroidLocation(lat*u.deg, lon*u.deg, 0*u.m, Earth).cartesian_cords.to_value(u.km)
-
-            if self.num_planes < 40:
-                for plane in range(self.num_planes):
-                    i = plane*self.num_sats_per_plane
-                    for k in range(T):
-                        sat_r = self.sat_rs_over_time[i, :, k]
-                        sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    
-                    if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                        continue
-
-                    for other_sat_i in range(1, self.num_sats_per_plane):
-                        if self.timestep_offset is not None:
-                            sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                        else:
-                            for k in range(T):
-                                sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-            
-            #if you have 40 planes, with a 120 degree FOV, your ground track is 20 degrees wide.
-            #Then, if no satellite in the plane before you nor the plane after you can see the task, no satellites in your plane can see it either.
-            else:
-                # iterate through even planes
-                planes_where_task_visible = set()
-                for plane in range(0, self.num_planes, 2):
-                    i = plane*self.num_sats_per_plane
-                    for k in range(T):
-                        sat_r = self.sat_rs_over_time[i, :, k]
-                        sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    
-                    if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                        continue
-                    else:
-                        planes_where_task_visible.add(plane)
-
-                    for other_sat_i in range(1, self.num_sats_per_plane):
-                        if self.timestep_offset is not None:
-                            sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                        else:
-                            for k in range(T):
-                                sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-
-                #iterate through odd planes
-                for plane in range(1, self.num_planes, 2):
-                    plane_before = plane-1
-                    plane_after = (plane+1) % self.num_planes
-                    if plane_before in planes_where_task_visible or plane_after in planes_where_task_visible:
-                        i = plane*self.num_sats_per_plane
-                        for k in range(T):
-                            sat_r = self.sat_rs_over_time[i, :, k]
-                            sat_prox_mat[i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                        
-                        if np.max(sat_prox_mat[i, j, :]) == 0 and self.skip_planes:
-                            continue
-
-                        for other_sat_i in range(1, self.num_sats_per_plane):
-                            if self.timestep_offset is not None:
-                                sat_prox_mat[i+other_sat_i, j, :] = np.roll(sat_prox_mat[i, j, :], self.timestep_offset*other_sat_i)
-                            else:
-                                for k in range(T):
-                                    sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
-                                    sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
-                    else:
-                        continue
-
+                            sat_r = self.sat_rs_over_time[i+other_sat_i, :, k]
+                            sat_prox_mat[i+other_sat_i, j, k] = calc_fov_based_proximities_fast(sat_r, task_loc, fov, gaussian_sigma_2)
+        
         return sat_prox_mat
 
     def determine_connectivity_graph(self):
@@ -324,21 +178,3 @@ class Satellite(object):
         """
         self.orbit = self.orbit.propagate(time)
         return self.orbit
-    
-def generate_smooth_coverage_hexagons(lat_range, lon_range, res=1):
-    # Initialize an empty set to store unique H3 indexes
-    hexagons = set()
-
-    # Step through the defined ranges and discretize the globe
-    lat_steps, lon_steps = 0.2/res, 0.2/res
-    lat = lat_range[0]
-    while lat <= lat_range[1]:
-        lon = lon_range[0]
-        while lon <= lon_range[1]:
-            # Find the hexagon containing this lat/lon
-            hexagon = h3.geo_to_h3(lat, lon, res)
-            hexagons.add(hexagon)
-            lon += lon_steps
-        lat += lat_steps
-        
-    return list(hexagons) #turn into a list so that you can easily index it later
