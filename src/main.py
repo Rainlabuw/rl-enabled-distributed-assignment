@@ -86,7 +86,6 @@ def experiment_run(params, explicit_dict_items=None, verbose=True):
             num_repeats = int(p.split("=")[1])
             params.remove(p)
 
-    # params = ['src/main.py', '--config=iql_sap', '--env-config=real_constellation_env']
     th.set_num_threads(1)
 
     # Get the default configs from default.yaml
@@ -103,28 +102,6 @@ def experiment_run(params, explicit_dict_items=None, verbose=True):
     config_dict = recursive_dict_update(config_dict, env_config)
     config_dict = recursive_dict_update(config_dict, alg_config)
 
-    if config_dict['env'] == 'benefit_obs_env':
-        benefits_by_state = []
-        benefits_by_state.append(np.array([[2, 3, 1], 
-                                        [1, 2, 3],
-                                        [3, 1, 2]]))
-        benefits_by_state.append(np.array([[0,   0.1, 0], 
-                                        [0,   0,   0.1],
-                                        [0.1, 0,   0]]))
-        benefits_by_state.append(np.array([[0,   0,   0.1], 
-                                        [0.1, 0,   0],
-                                        [0,   0.1, 0]]))
-        config_dict["env_args"]["benefits_by_state"] = benefits_by_state
-    elif config_dict['env'] == 'simplest-env-v0':
-        register(
-            id="simplest-env-v0",
-            entry_point="envs.simplest_env:SimplestEnv",
-            kwargs={
-                    "benefits_by_state": benefits_by_state,
-                    "T": config_dict['env_args']['T'],
-                },
-        )
-
     #Add items from explicit_dict_items (hardcoded for 2 levels of dicts)
     if explicit_dict_items is not None:
         for k, v in explicit_dict_items.items():
@@ -134,16 +111,7 @@ def experiment_run(params, explicit_dict_items=None, verbose=True):
             else:
                 config_dict[k] = v
 
-    # now add all the config to sacred
     ex.add_config(config_dict)
-
-    # Save to disk by default for sacred
-    logger.info("Saving to FileStorageObserver in results/sacred.")
-    # file_obs_path = os.path.join(results_path, f"sacred/{config_dict['name']}")
-
-    # ex.observers.append(MongoObserver(db_name="marlbench")) #url='172.31.5.187:27017'))
-    # ex.observers.append(FileStorageObserver.create(file_obs_path))
-    # ex.observers.append(MongoObserver())
 
     for exp_num in range(num_repeats):
         print(f"Starting experiment {exp_num+1}/{num_repeats}")

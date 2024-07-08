@@ -189,36 +189,27 @@ def run_sequential(args, logger):
     if args.checkpoint_path != "":
         timesteps = []
         timestep_to_load = 0
+        
+        # Go through all files in args.checkpoint_path
+        for name in os.listdir(args.checkpoint_path):
+            full_name = os.path.join(args.checkpoint_path, name)
+            # Check if they are dirs the names of which are numbers
+            if os.path.isdir(full_name) and name.isdigit():
+                timesteps.append(int(name))
 
-        skip_load = False
-        checkpoint_path = os.path.join('/gscratch/socialrl/josh_holder/marl_sap/results/models', args.checkpoint_path)
-        if not os.path.isdir(checkpoint_path):
-            logger.console_logger.info(
-                "Checkpoint directory {} doesn't exist, skipping checkpoint load".format(checkpoint_path)
-            )
-            skip_load = True
+        if args.load_step == 0:
+            # choose the max timestep
+            timestep_to_load = max(timesteps)
+        else:
+            # choose the timestep closest to load_step
+            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
 
-        if not skip_load:
-            # Go through all files in args.checkpoint_path
-            for name in os.listdir(checkpoint_path):
-                full_name = os.path.join(checkpoint_path, name)
-                # Check if they are dirs the names of which are numbers
-                if os.path.isdir(full_name) and name.isdigit():
-                    timesteps.append(int(name))
+        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
 
-            if args.load_step == 0:
-                # choose the max timestep
-                timestep_to_load = max(timesteps)
-            else:
-                # choose the timestep closest to load_step
-                timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
-
-            model_path = os.path.join(checkpoint_path, str(timestep_to_load))
-
-            logger.console_logger.info("Loading model from {}".format(model_path))
-            learner.load_models(model_path)
-            if bc_learner_type is not None: bc_learner.load_models(model_path)
-            runner.t_env = timestep_to_load
+        logger.console_logger.info("Loading model from {}".format(model_path))
+        learner.load_models(model_path)
+        if bc_learner_type is not None: bc_learner.load_models(model_path)
+        runner.t_env = timestep_to_load
 
     # ~~~~~~~~~~~~~~~~ EVALUATE IF DESIRED (skip the rest of training if so) ~~~~~~~~~~~~~~~~
     if args.evaluate or args.save_replay:
