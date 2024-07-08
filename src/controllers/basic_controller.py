@@ -57,6 +57,7 @@ class BasicMAC:
         self.selector_agent = agent_REGISTRY[self.args.agent](input_shape, self.args) #Agent for selecting actions, always on CPU
 
     def update_action_selector_agent(self):
+        print("updating")
         self.selector_agent.load_state_dict(self.agent.state_dict())
 
     def _build_inputs(self, batch, t):

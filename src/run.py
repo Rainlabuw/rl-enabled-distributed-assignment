@@ -344,9 +344,7 @@ def run_behavior_cloning_pretraining(args, logger, runner, buffer, learner,
         if episode_sample.device != args.device:
             episode_sample.to(args.device)
 
-        st = time.time()
         learner.train(episode_sample, 0, episode_num=0)
-        print(f"Pretrain training time: {time.time()-st}")
         pretrain_batches += args.batch_size_run // epochs
 
         #Increment runner t_env to simulate the number of environment steps

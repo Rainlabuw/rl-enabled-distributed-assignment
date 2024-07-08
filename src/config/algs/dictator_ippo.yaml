@@ -35,8 +35,8 @@ name: "dictator_ippo"
 t_max: 50000
 
 #Behavior cloning properties
-use_bc: True
-buffer_size: 1000 #size of the buffer to use for behavior cloning
-offline_dataset_path: "dictator_data" #path to the offline dataset
-pretrain_batches: 1000 #Episodes to train on provided replay buffer (match 10000 exploration steps for REDA and IQL)
-pretrain_batch_size_run: 2 #this seems like the sweet spot for n=324, m=450
+# bc_learner: "bc_learner"
+# buffer_size: 1000 #size of the buffer to use for behavior cloning
+# offline_dataset_path: "dictator_data" #path to the offline dataset
+# pretrain_batches: 1000 #Episodes to train on provided replay buffer (match 10000 exploration steps for REDA and IQL)
+# pretrain_batch_size_run: 2 #this seems like the sweet spot for n=324, m=450

@@ -85,20 +85,19 @@ class BCLearner:
 
         terminated = batch["terminated"][:, :-1].float()
         mask = batch["filled"][:, :-1].float()
-        print(mask.shape, terminated.shape)
         mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
 
         critic_mask = mask.clone()
-        mask = mask.repeat(1, 1, self.n).view(-1)
-
+        
         if self.args.learner == "coma_learner":
             advantages, critic_train_stats = self._train_critic_coma(batch, rewards, terminated, actions, avail_actions,
                                                         critic_mask, bs, max_t)
-            print("HI", advantages.shape, mask.shape)
+            mask = mask.repeat(1, 1, self.n).unsqueeze(-1)#.view(-1)
         else:
             advantages, critic_train_stats = self._train_critic_standard(self.critic, self.target_critic, batch, rewards,
                                                                         critic_mask)
-        
+            mask = mask.repeat(1, 1, self.n)
+
         self.critic_training_steps += 1
         if self.args.target_update_interval_or_tau > 1 and (
                 self.critic_training_steps - self.last_target_update_step) / self.args.target_update_interval_or_tau >= 1.0:
@@ -164,7 +163,6 @@ class BCLearner:
         return masked_td_error, running_log
     
     def _train_critic_coma(self, batch, rewards, terminated, actions, avail_actions, mask, bs, max_t):
-        print("hello")
         # Optimise critic
         with th.no_grad():
             target_q_vals = self.target_critic(batch)
@@ -175,7 +173,6 @@ class BCLearner:
             targets_taken = targets_taken * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
         targets = self.nstep_returns(rewards, mask, targets_taken, self.args.q_nstep)
-        print("done222")
         if self.args.standardise_returns:
             self.ret_ms.update(targets)
             targets = (targets - self.ret_ms.mean) / th.sqrt(self.ret_ms.var)
@@ -207,7 +204,6 @@ class BCLearner:
         running_log["td_error_abs"].append((masked_td_error.abs().sum().item() / mask_elems))
         running_log["q_taken_mean"].append((q_taken * mask).sum().item() / mask_elems)
         running_log["target_mean"].append((targets * mask).sum().item() / mask_elems)
-        print("done")
         return q_vals, running_log
 
     def nstep_returns(self, rewards, mask, values, nsteps):
@@ -226,7 +222,6 @@ class BCLearner:
                 else:
                     nstep_return_t += self.args.gamma ** (step) * rewards[:, t] * mask[:, t]
             nstep_values[:, t_start, :] = nstep_return_t
-        print("nstpe")
         return nstep_values
 
     def _update_targets(self):

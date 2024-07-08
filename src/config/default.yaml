@@ -50,7 +50,7 @@ label: "default_label"
 hypergroup: null
 
 # --- Pretraining configs ---
-use_bc: False # Use behavioral cloning
+bc_learner: null # By default, don't use either bc_learner or filtered_bc_learner
 use_offline_rl: False # Use offline RL
 offline_dataset_path: null
 pretrain_fn: "haa_selector"
