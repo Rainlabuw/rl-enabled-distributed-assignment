@@ -59,7 +59,7 @@ def run(_run, _config, _log):
 
     # Run and train
     if args.evaluate:
-        if args.env == "real_power_constellation_env":
+        if args.env == "constellation_env":
             actions, reward, ps = run_sequential(args=args, logger=logger)
         else:
             actions, reward = run_sequential(args=args, logger=logger)
@@ -85,7 +85,7 @@ def run(_run, _config, _log):
     # Making sure framework really exits
     # os._exit(os.EX_OK)
     if args.evaluate: 
-        if args.env == "real_power_constellation_env":
+        if args.env == "constellation_env":
             return actions, reward, ps
         else:
             return actions, reward
@@ -102,7 +102,7 @@ def evaluate_sequential(args, runner):
 
     runner.close_env()
 
-    if args.env == "real_power_constellation_env":
+    if args.env == "constellation_env":
         power_states = batch.data.transition_data['power_states'][0,-1,:]
         episode_power_states = batch.data.transition_data['power_states']
         #Return the actions taken by agents over the course of the episode
@@ -189,7 +189,7 @@ def run_sequential(args, logger):
     if args.checkpoint_path != "":
         timesteps = []
         timestep_to_load = 0
-        
+
         # Go through all files in args.checkpoint_path
         for name in os.listdir(args.checkpoint_path):
             full_name = os.path.join(args.checkpoint_path, name)
@@ -218,7 +218,7 @@ def run_sequential(args, logger):
         logger.print_recent_stats()
         logger.console_logger.info("Finished Evaluation")
 
-        if args.env == "real_power_constellation_env":
+        if args.env == "constellation_env":
             actions, reward, ps = evaluate_sequential(args, runner)
             return actions, reward, ps
         else:

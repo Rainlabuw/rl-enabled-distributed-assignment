@@ -10,6 +10,7 @@ The Python environment parameters are listed in requirements.txt
 
 Thus, the recommended steps are:
  - `conda create -n "myenv" python=3.8.12 ipython`
+ - `conda activate myenv`
  - `pip3 install -r requirements.txt`
  - (Maybe necessary to get shapely to work) `conda install geos`
 

@@ -1,7 +1,4 @@
 import logging
-from collections import namedtuple, defaultdict
-from enum import Enum
-from itertools import product
 from gym import Env
 import gym
 from gym.utils import seeding
@@ -14,7 +11,7 @@ from .HighPerformanceConstellationSim import HighPerformanceConstellationSim
 
 import time
 
-class RealPowerConstellationEnv(Env):
+class ConstellationEnv(Env):
     def __init__(self,
                  num_planes, num_sats_per_plane, m,
                  T, N, M, L, 

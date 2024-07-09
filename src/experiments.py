@@ -2,8 +2,78 @@ from main import experiment_run
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils.methods import calc_pass_statistics, calc_pct_conflicts, test_rl_model, test_classic_algorithm
+from utils.methods import calc_pass_statistics, calc_pct_conflicts, convert_central_sol_to_assignment_mat
 from envs.HighPerformanceConstellationSim import HighPerformanceConstellationSim
+
+def test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items=None, verbose=False):
+    params = [
+        'src/main.py',
+        f'--config={alg_str}',
+        f'--env-config={env_str}',
+        'with',
+        f'checkpoint_path={load_path}',
+        'test_nepisode=1',
+        'evaluate=True',
+        'buffer_size=1',
+        'runner=episode',
+        'batch_size_run=1'
+        ]
+    if explicit_dict_items is None:
+        explicit_dict_items = {
+            'env_args': {'sat_prox_mat': sat_prox_mat,
+                         "graphs": [1],} #placeholder
+        }
+    else:
+        explicit_dict_items['env_args']['sat_prox_mat'] = sat_prox_mat
+    
+    n = sat_prox_mat.shape[0]
+    m = sat_prox_mat.shape[1]
+
+    exp = experiment_run(params, explicit_dict_items, verbose=verbose)
+    val = float(exp.result[1])
+    actions = exp.result[0]
+    assigns = [convert_central_sol_to_assignment_mat(n, m, a) for a in actions]
+
+    if env_str == 'constellation_env':
+        ps = exp.result[2]
+        return assigns, val, ps
+    else:
+        return assigns, val
+
+def test_classic_algorithm(alg_str, env_str, sat_prox_mat, explicit_dict_items=None, verbose=False):
+    params = [
+        'src/main.py',
+        '--config=filtered_reda',
+        f'--env-config={env_str}',
+        'with',
+        'test_nepisode=1',
+        'evaluate=True',
+        'jumpstart_evaluation_epsilon=1',
+        f'jumpstart_action_selector=\"{alg_str}\"',
+        'buffer_size=1'
+        ]
+    if explicit_dict_items is None:
+        explicit_dict_items = {
+            'env_args': {'sat_prox_mat': sat_prox_mat,
+                        'graphs': [1], #placeholder
+                        }
+        }
+    else:
+        explicit_dict_items['env_args']['sat_prox_mat'] = sat_prox_mat
+
+    n = sat_prox_mat.shape[0]
+    m = sat_prox_mat.shape[1]
+
+    exp = experiment_run(params, explicit_dict_items, verbose=verbose)
+    val = float(exp.result[1])
+    actions = exp.result[0]
+    assigns = [convert_central_sol_to_assignment_mat(n, m, a) for a in actions]
+
+    if env_str == 'constellation_env':
+        ps = exp.result[2]
+        return assigns, val, ps
+    else:
+        return assigns, val
 
 def dictator_env_training():
     """
@@ -46,7 +116,7 @@ def constellation_env_test():
     T = 100
     L = 3
     lambda_ = 0.5
-    env_str = 'real_power_constellation_env'
+    env_str = 'constellation_env'
 
     reda_sat_ps = []
     iql_sat_ps = []
@@ -69,7 +139,7 @@ def constellation_env_test():
     haal_vals = []
     alpha_beta_vals = []
 
-    num_tests = 5
+    num_tests = 1
     for _ in range(num_tests):
         print(f"Testing algs on random constellation {_+1}/{num_tests}")
         const = HighPerformanceConstellationSim(num_planes, num_sats_per_plane, T)
@@ -89,7 +159,7 @@ def constellation_env_test():
         reda_assigns, reda_val, reda_ps = test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items, verbose=False)
         reda_sat_ps.append(np.sum(np.where(reda_ps > 0, 1, 0)) / n)
 
-        _, _, reda_al, _ = calc_pass_statistics(sat_prox_mat, reda_assigns)
+        _, _, reda_al = calc_pass_statistics(sat_prox_mat, reda_assigns)
         reda_ass_len.append(reda_al)
         reda_vals.append(reda_val)
 
@@ -102,18 +172,18 @@ def constellation_env_test():
 
         tot_iql_conflicts.extend(calc_pct_conflicts(iql_assigns))
 
-        _, _, iql_al, _ = calc_pass_statistics(sat_prox_mat, iql_assigns)
+        _, _, iql_al = calc_pass_statistics(sat_prox_mat, iql_assigns)
         iql_ass_len.append(iql_al)
         iql_vals.append(iql_val)
 
         # IPPO
         alg_str = 'filtered_ippo'
-        load_path = '/Users/joshholder/code/marl_sap/results/models/filtered_ippo_seed194208545_2024-05-20 21:35:11.427806'
+        load_path = './pretrained_models/ippo_constellation_env'
         ippo_assigns, ippo_val, ippo_ps = test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items, verbose=False)
 
         tot_ippo_conflicts.extend(calc_pct_conflicts(ippo_assigns))
 
-        _, _, ippo_al, _ = calc_pass_statistics(sat_prox_mat, ippo_assigns)
+        _, _, ippo_al = calc_pass_statistics(sat_prox_mat, ippo_assigns)
         ippo_ass_len.append(ippo_al)
         ippo_sat_ps.append(np.sum(np.where(ippo_ps > 0, 1, 0)) / n)
         ippo_vals.append(ippo_val)
@@ -122,7 +192,7 @@ def constellation_env_test():
         haal_assigns, haal_val, haal_ps = test_classic_algorithm('haal_selector', env_str, sat_prox_mat, verbose=False)
         haal_sat_ps.append(np.sum(np.where(haal_ps > 0, 1, 0)) / n)
 
-        _, _, haal_al, haal_ab = calc_pass_statistics(sat_prox_mat, haal_assigns)
+        _, _, haal_al = calc_pass_statistics(sat_prox_mat, haal_assigns)
         haal_ass_len.append(haal_al)
         haal_vals.append(haal_val)
 
@@ -130,7 +200,7 @@ def constellation_env_test():
         alpha_beta_assigns, alpha_beta_val, alpha_beta_ps = test_classic_algorithm('alpha_beta_selector', env_str, sat_prox_mat)
         alpha_beta_sat_ps.append(np.sum(np.where(alpha_beta_ps > 0, 1, 0)) / n)
 
-        _, _, alpha_beta_al, _ = calc_pass_statistics(sat_prox_mat, alpha_beta_assigns)
+        _, _, alpha_beta_al = calc_pass_statistics(sat_prox_mat, alpha_beta_assigns)
         alpha_beta_ass_len.append(alpha_beta_al)
         alpha_beta_vals.append(alpha_beta_val)
 
@@ -218,9 +288,9 @@ def constellation_env_test():
 
 if __name__ == "__main__":
     # Train REDA, IQL, IPPO, COMA on dictator environment from scratch
-    dictator_env_training()
+    # dictator_env_training()
 
     # Test pretrained algorithms on constellation environment
     constellation_env_test()
 
-    # Train i.e. REDA from scratch by running python3 src/main.py --config=filtered_reda --env-config=real_power_constellation_env
+    # Train i.e. REDA from scratch by running python3 src/main.py --config=filtered_reda --env-config=constellation_env
