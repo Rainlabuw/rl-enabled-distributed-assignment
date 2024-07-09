@@ -1,23 +1,19 @@
 # code adapted from https://github.com/wendelinboehmer/dcg
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import numpy as np
-
-class FlatConstellationAgent(nn.Module):
+class Agent(nn.Module):
     def __init__(self, input_shape, args):
-        super(FlatConstellationAgent, self).__init__()
+        super(Agent, self).__init__()
         self.args = args
-        self.M = args.env_args["M"]
 
         self.fc1 = nn.Linear(input_shape, args.hidden_dim)
         if self.args.use_rnn:
             self.rnn = nn.GRUCell(args.hidden_dim, args.hidden_dim)
         else:
             self.rnn = nn.Linear(args.hidden_dim, args.hidden_dim)
-        self.fc2 = nn.Linear(args.hidden_dim, self.M+1)
+        self.fc2 = nn.Linear(args.hidden_dim, args.m)
 
     def init_hidden(self):
         # make hidden states on same device as model
@@ -32,3 +28,4 @@ class FlatConstellationAgent(nn.Module):
             h = F.relu(self.rnn(x))
         q = self.fc2(h)
         return q, h
+

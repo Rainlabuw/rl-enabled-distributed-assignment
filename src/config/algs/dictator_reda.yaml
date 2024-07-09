@@ -26,7 +26,6 @@ use_mps: False
 target_update_interval_or_tau: 0.01
 
 # --- Agent parameters ---
-agent: "rnn"
 num_filters: 5 # Number of filters
 hidden_dim: 64 # Size of hidden state for default rnn agent
 use_rnn: False

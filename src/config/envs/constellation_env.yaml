@@ -1,4 +1,4 @@
-env: "real_constellation_env"
+env: "constellation_env"
 
 env_args:
   num_planes: 18
@@ -15,10 +15,9 @@ env_args:
 
 test_greedy: True
 test_nepisode: 20
-test_interval: 50000
-log_interval: 50000
+test_interval: 25000
+log_interval: 25000
 runner_log_interval: 5000
 learner_log_interval: 5000
-t_max: 1000000
 use_wandb: False
 wandb_run_name: null

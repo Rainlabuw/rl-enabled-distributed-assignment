@@ -25,7 +25,6 @@ t_max: 50000
 # update the target network every {} episodes
 target_update_interval_or_tau: 0.01
 
-agent: "rnn" # Default constellation agent (multi-component benefit observation)
 num_filters: 5 # Number of filters
 hidden_dim: 64 # Size of hidden state for default rnn agent
 use_rnn: False

@@ -14,7 +14,29 @@ Thus, the recommended steps are:
  - (Maybe necessary to get shapely to work) `conda install geos`
 
 ## Quick Guide to the Code
-TODO
+The critical REDA files are located in the following placaes:
+ - `src/action_selectors/action_selectors.py` contains the code which builds the benefit matrix (\mathbf{Q}) from the neural network output and uses \alpha(\mathbf{Q} + \zeta) to make assignments.
+ - `src/learners/sap_q_learner.py` contains the REDA learning loop, in which targets are calculated using rewards from the replay buffer and next-step rewards yielded by \alpha(Q). (Compare this to `src/learners/q_learner.py` for a clear view of the special implementation for REDA.)
 
 ## Running experiments from the paper
-TODO
+Several experiments from the paper have been set up in `src/experiments.py` for easy replication. Simply run:
+
+`python3 src/experiments.py`
+
+from the base directory with the appropriate tests selected to replicate these experiments.
+
+To run the preset experiment training REDA, IQL, COMA, and IPPO from scratch in the dictator environment, uncomment `dictator_env_training()` in the `__main__` function of `src/experiments.py`.
+
+To test the performance of pretrained REDA, IQL, and IPPO models as used in the paper, uncomment `constellation_env_test()` in `__main__`.
+
+Finally, to run individual training runs of algorithms, use commands of the following format:
+
+`python3 src/main.py --config=<alg_str> --env-config=<env_str> with <config_name>=<config_val>`
+
+For example, to train REDA on the dictator environment with wandb tracking on, run:
+
+`python3 src/main.py --config=dictator_reda --env-config=dictator_env with use_wandb=True`
+
+To train IQL on the full constellation environment, using 10 parallel environments, run:
+
+`python3 src/main.py --config=filtered_iql --env-config=constellation_env with runner=parallel batch_size_run=10`

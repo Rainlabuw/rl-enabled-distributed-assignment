@@ -13,5 +13,5 @@ def env_fn(env, **kwargs) -> MultiAgentEnv:
     return env(**kwargs)
 
 REGISTRY = {}
-REGISTRY["real_power_constellation_env"] = partial(env_fn, env=RealPowerConstellationEnv)
+REGISTRY["constellation_env"] = partial(env_fn, env=RealPowerConstellationEnv)
 REGISTRY["dictator_env"] = partial(env_fn, env=DictatorEnv)

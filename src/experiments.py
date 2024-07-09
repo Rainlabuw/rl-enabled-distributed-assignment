@@ -2,256 +2,8 @@ from main import experiment_run
 import numpy as np
 import matplotlib.pyplot as plt
 
+from utils.methods import calc_pass_statistics, calc_pct_conflicts, test_rl_model, test_classic_algorithm
 from envs.HighPerformanceConstellationSim import HighPerformanceConstellationSim
-
-def test_rl_model(alg_str, env_str, load_path, sat_prox_mat, explicit_dict_items=None, verbose=False):
-    params = [
-        'src/main.py',
-        f'--config={alg_str}',
-        f'--env-config={env_str}',
-        'with',
-        f'checkpoint_path={load_path}',
-        'test_nepisode=1',
-        'evaluate=True',
-        'buffer_size=1',
-        'runner=episode',
-        'batch_size_run=1'
-        ]
-    if explicit_dict_items is None:
-        explicit_dict_items = {
-            'env_args': {'sat_prox_mat': sat_prox_mat,
-                         "graphs": [1],} #placeholder
-        }
-    else:
-        explicit_dict_items['env_args']['sat_prox_mat'] = sat_prox_mat
-    
-    n = sat_prox_mat.shape[0]
-    m = sat_prox_mat.shape[1]
-
-    exp = experiment_run(params, explicit_dict_items, verbose=verbose)
-    val = float(exp.result[1])
-    actions = exp.result[0]
-    assigns = [convert_central_sol_to_assignment_mat(n, m, a) for a in actions]
-
-    if env_str == 'real_power_constellation_env':
-        ps = exp.result[2]
-        return assigns, val, ps
-    else:
-        return assigns, val
-
-def test_classic_algorithms(alg_str, env_str, sat_prox_mat, explicit_dict_items=None, verbose=False):
-    params = [
-        'src/main.py',
-        '--config=filtered_reda',
-        f'--env-config={env_str}',
-        'with',
-        'test_nepisode=1',
-        'evaluate=True',
-        'jumpstart_evaluation_epsilon=1',
-        f'jumpstart_action_selector=\"{alg_str}\"',
-        'buffer_size=1'
-        ]
-    if explicit_dict_items is None:
-        explicit_dict_items = {
-            'env_args': {'sat_prox_mat': sat_prox_mat,
-                        'graphs': [1], #placeholder
-                        }
-        }
-    else:
-        explicit_dict_items['env_args']['sat_prox_mat'] = sat_prox_mat
-
-    n = sat_prox_mat.shape[0]
-    m = sat_prox_mat.shape[1]
-
-    exp = experiment_run(params, explicit_dict_items, verbose=verbose)
-    val = float(exp.result[1])
-    actions = exp.result[0]
-    assigns = [convert_central_sol_to_assignment_mat(n, m, a) for a in actions]
-
-    if env_str == 'real_power_constellation_env':
-        ps = exp.result[2]
-        return assigns, val, ps
-    else:
-        return assigns, val
-
-def calc_handovers_generically(assignments, init_assign=None, benefit_info=None):
-    """
-    Calculate the number of handovers generically, without assuming that the handover penalty
-    is the generic handover penalty, as opposed to calc_value_num_handovers above.
-    """
-    n = assignments[0].shape[0]
-    m = assignments[0].shape[1]
-    T = len(assignments)
-
-    #If T_trans is provided, then use it, otherwise just set it to 
-    try:
-        T_trans = benefit_info.T_trans
-    except AttributeError:
-        T_trans = np.ones((m,m)) - np.eye(m)
-
-    num_handovers = 0
-    prev_assign = init_assign
-    for k in range(T):
-        if prev_assign is not None:
-            new_assign = assignments[k]
-
-            #iterate through agents
-            for i in range(n):
-                new_task_assigned = np.argmax(new_assign[i,:])
-                prev_task_assigned = np.argmax(prev_assign[i,:])
-
-                if prev_assign[i,new_task_assigned] == 0 and T_trans[prev_task_assigned,new_task_assigned] == 1:
-                    num_handovers += 1
-        
-        prev_assign = assignments[k]
-
-    return num_handovers
-
-def calc_pct_conflicts(assignments):
-    T = len(assignments)
-    n = assignments[0].shape[0]
-    m = assignments[0].shape[1]
-
-    pct_conflicts = []
-    for k in range(T):
-        num_agents_w_conflicts = 0
-        for i in range(n):
-            assigned_task = np.argmax(assignments[k][i,:])
-            if np.sum(assignments[k][:,assigned_task]) > 1:
-                num_agents_w_conflicts += 1
-        
-        pct_conflicts.append(100*num_agents_w_conflicts / n)
-
-    return pct_conflicts
-
-def calc_pass_statistics(benefits, assigns=None):
-    """
-    Given a benefit array returns various statistics about the satellite passes over tasks.
-
-    Note that we define a satellite pass as the length of time a satellite
-    can obtain non-zero benefit for completing a given task.
-
-    Specifically:
-     - avg_pass_len: the average length of time a satellite is in view of a single task
-            (even if the satellite is not assigned to the task)
-     - avg_pass_ben: the average benefits that would be yielded for a satellite being
-            assigned to a task for the whole time it is in view
-
-    IF assigns is provided, then we also calculate:
-     - avg_ass_len: the average length of time a satellite is assigned to the same task
-            (only counted when the task the satellite is completing has nonzero benefit)
-     - avg_ass_ben: the average benefits yielded by a satellite over the course of time
-            it is assigned to the same task.
-    """
-    n = benefits.shape[0]
-    m = benefits.shape[1]
-    T = benefits.shape[2]
-
-    pass_lens = []
-    pass_bens = []
-    task_assign_len = []
-    task_assign_ben = []
-    l = 0
-    for j in range(m):
-        for i in range(n):
-            pass_started = False
-            task_assigned = False
-            assign_len = 0
-            assign_ben = 0
-            pass_len = 0
-            pass_ben = 0
-            this_pass_assign_lens = []
-            this_pass_assign_bens = []
-            for k in range(T):
-                if benefits[i,j,k] > 0:
-                    if not pass_started:
-                        pass_started = True
-                    pass_len += 1
-                    pass_ben += benefits[i,j,k]
-
-                    if assigns is not None and assigns[k][i,j] == 1:
-                        if not task_assigned: 
-                            task_assigned = True
-                        assign_len += 1
-                        assign_ben += benefits[i,j,k]
-                    #If there are benefits and the task was previously assigned,
-                    #but is no longer, end the streak
-                    elif task_assigned:
-                        task_assigned = False
-                        this_pass_assign_lens.append(assign_len)
-                        this_pass_assign_bens.append(assign_ben)
-                        assign_len = 0
-                        assign_ben = 0
-                elif pass_started and benefits[i,j,k] == 0.0:
-                    if task_assigned:
-                        this_pass_assign_lens.append(assign_len)
-                        this_pass_assign_bens.append(assign_ben)
-                    pass_started = False
-                    task_assigned = False
-                    for ass_len in this_pass_assign_lens:
-                        task_assign_len.append(ass_len)
-                    for ass_ben in this_pass_assign_bens:
-                        task_assign_ben.append(ass_ben)
-                    this_pass_assign_lens = []
-                    this_pass_assign_bens = []
-                    pass_lens.append(pass_len)
-                    pass_bens.append(pass_ben)
-                    pass_len = 0
-                    pass_ben = 0
-                    assign_len = 0
-                    assign_ben = 0
-    
-    avg_pass_len = sum(pass_lens) / len(pass_lens)
-    avg_pass_ben = sum(pass_bens) / len(pass_bens)
-
-    if assigns is not None:
-        avg_ass_len = sum(task_assign_len) / len(task_assign_len)
-        avg_ass_ben = sum(task_assign_ben) / len(task_assign_ben)
-        return avg_pass_len, avg_pass_ben, avg_ass_len, avg_ass_ben
-    else:
-        return avg_pass_len, avg_pass_ben
-    
-def calc_meaningful_handovers(sat_prox_mat, assignments):
-    """
-    Calculate the number of handovers generically, without assuming that the handover penalty
-    is the generic handover penalty, as opposed to calc_value_num_handovers above.
-    """
-    assignments = assignments[:-1] #last assign matrix is not real
-
-    n = assignments[0].shape[0]
-    m = assignments[0].shape[1]
-    T = len(assignments)
-
-    num_handovers = 0
-    prev_assign = np.ones_like(assignments[0])
-    for k in range(T):
-        if prev_assign is not None:
-            new_assign = assignments[k]
-
-            #iterate through agents
-            for i in range(n):
-                new_task_assigned = np.argmax(new_assign[i,:])
-                prev_task_assigned = np.argmax(prev_assign[i,:])
-
-                if prev_assign[i,new_task_assigned] == 0 and sat_prox_mat[i, new_task_assigned, k] > 0:
-                    num_handovers += 1
-        
-        prev_assign = assignments[k]
-
-    return num_handovers
-
-def convert_central_sol_to_assignment_mat(n, m, assignments):
-    """
-    Converts a list of column indices to an assignment matrix.
-    (column indices are the output from scipy.optimize.linear_sum_assignment)
-
-    i.e. for n=m=3, [1,2,0] -> [[0,1,0],[0,0,1],[1,0,0]]
-    """
-    assignment_mat = np.zeros((n, m), dtype="bool")
-    for i, assignment in enumerate(assignments):
-        assignment_mat[i, assignment] = 1
-
-    return assignment_mat
 
 def dictator_env_training():
     """
@@ -367,7 +119,7 @@ def constellation_env_test():
         ippo_vals.append(ippo_val)
 
         # HAAL
-        haal_assigns, haal_val, haal_ps = test_classic_algorithms('haal_selector', env_str, sat_prox_mat, verbose=False)
+        haal_assigns, haal_val, haal_ps = test_classic_algorithm('haal_selector', env_str, sat_prox_mat, verbose=False)
         haal_sat_ps.append(np.sum(np.where(haal_ps > 0, 1, 0)) / n)
 
         _, _, haal_al, haal_ab = calc_pass_statistics(sat_prox_mat, haal_assigns)
@@ -375,7 +127,7 @@ def constellation_env_test():
         haal_vals.append(haal_val)
 
         # \alpha(\beta)
-        alpha_beta_assigns, alpha_beta_val, alpha_beta_ps = test_classic_algorithms('alpha_beta_selector', env_str, sat_prox_mat)
+        alpha_beta_assigns, alpha_beta_val, alpha_beta_ps = test_classic_algorithm('alpha_beta_selector', env_str, sat_prox_mat)
         alpha_beta_sat_ps.append(np.sum(np.where(alpha_beta_ps > 0, 1, 0)) / n)
 
         _, _, alpha_beta_al, _ = calc_pass_statistics(sat_prox_mat, alpha_beta_assigns)
@@ -465,10 +217,10 @@ def constellation_env_test():
 
 
 if __name__ == "__main__":
-    # # Train REDA, IQL, IPPO, COMA on dictator environment from scratch
+    # Train REDA, IQL, IPPO, COMA on dictator environment from scratch
     dictator_env_training()
 
     # Test pretrained algorithms on constellation environment
-    # constellation_env_test()
+    constellation_env_test()
 
     # Train i.e. REDA from scratch by running python3 src/main.py --config=filtered_reda --env-config=real_power_constellation_env
