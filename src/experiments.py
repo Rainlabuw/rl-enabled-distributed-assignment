@@ -466,7 +466,9 @@ def constellation_env_test():
 
 if __name__ == "__main__":
     # # Train REDA, IQL, IPPO, COMA on dictator environment from scratch
-    # dictator_env_training()
+    dictator_env_training()
 
     # Test pretrained algorithms on constellation environment
-    constellation_env_test()
+    # constellation_env_test()
+
+    # Train i.e. REDA from scratch by running python3 src/main.py --config=filtered_reda --env-config=real_power_constellation_env

@@ -42,7 +42,5 @@ standardise_rewards: True
 agent_output_type: "q"
 learner: "filtered_sap_q_learner"
 double_q: True
-mixer:
-
 
 name: "filtered_reda"

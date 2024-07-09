@@ -37,7 +37,5 @@ standardise_rewards: True
 agent_output_type: "q"
 learner: "sap_q_learner"
 double_q: True
-mixer:
-
 
 name: "dictator_reda"

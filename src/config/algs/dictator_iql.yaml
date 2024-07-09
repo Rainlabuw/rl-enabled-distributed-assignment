@@ -37,6 +37,5 @@ learner: "q_learner"
 standardise_returns: False
 standardise_rewards: True
 double_q: True
-mixer: # Mixer becomes None
 
 name: "dictator_iql"
